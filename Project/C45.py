@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 def mean(xs):
     return float(sum(xs)) / len(xs)
 
@@ -363,10 +366,10 @@ class C45:
 
     def _get_random_child_node(self):
         name = float("nan")
-        
+
         while isnan(name):
             name = np.random.choice(self.children_probs.keys(), p=self.children_probs.values())
-            
+
         return self.children[name]
 
     def prune(self, X_val, y_val):
@@ -412,3 +415,110 @@ class C45:
     def _make_internal(self):
         self.leaf = False
         self.value = None
+
+def setNodeId(depth,index=0):
+    return str(int(depth)) + str(int(index))
+
+def show_content(node, result_list):
+    i = 0
+    node_txt = ''
+    while i < len(node.counts.keys()):
+        tmp_result = ''
+
+        number = node.counts[node.counts.keys()[i]]
+        tmp_result = result_list[node.counts.keys()[i]] + ': ' + str(number) + '\n'
+
+        node_txt += tmp_result
+
+        i += 1
+    return node_txt
+
+import Queue
+import pydot
+
+
+
+def draw(node,feature_list, result_list, path):
+
+    graph = pydot.Dot(graph_type='graph')
+
+    cid = 0
+
+    que = Queue.Queue()
+
+    node.Id = setNodeId(node.depth)
+    que.put(node)
+
+    while(que.qsize() > 0):
+
+        node = que.get()
+
+        feature = feature_list[node.feature]
+
+        node_txt =  feature + '\n' + show_content(node, result_list)
+
+        graph.add_node(pydot.Node(node.Id, label = node_txt))
+
+
+        for index in node.children.keys():
+            if node.children[index].leaf == True:
+                if len(node.children[index].counts.keys()) == 1:
+                    edge_txt = ''
+
+                    node.children[index].Id = setNodeId(node.children[index].depth, cid)
+
+                    value = node.children[index].counts[node.children[index].counts.keys()[0]]
+                    result = result_list[node.children[index].counts.keys()[0]]
+
+                    graph.add_node(pydot.Node(node.children[index].Id, label = result + "\n" + str(value), shape = 'box'))
+
+                    if node.feature not in node.continuous:
+                        edge_txt = str(index)
+                    else:
+                        if str(index) == "smaller":
+                            edge_txt = u'≤' + str(node.feature_split)
+                        else:
+                            edge_txt = '>' + str(node.feature_split)
+
+                    edge = pydot.Edge(node.Id, node.children[index].Id, label= edge_txt)
+                    graph.add_edge(edge)
+
+                    cid += 1
+                else:
+                    edge_txt = ''
+                    node_txt = show_content(node.children[index], result_list)
+
+                    node.children[index].Id = setNodeId(node.children[index].depth, cid)
+                    graph.add_node(pydot.Node(node.children[index].Id, label = node_txt, shape = 'box'))
+
+                    if node.feature not in node.continuous:
+                        edge_txt = str(index)
+                    else:
+                        if str(index) == "smaller":
+                            edge_txt = u'≤' + str(node.feature_split)
+                        else:
+                            edge_txt = '>' + str(node.feature_split)
+
+                    edge = pydot.Edge(node.Id, node.children[index].Id, label= edge_txt)
+                    graph.add_edge(edge)
+
+                    cid += 1
+
+            else:
+                edge_txt = ''
+                node.children[index].Id = setNodeId(node.children[index].depth, cid)
+
+                if node.feature not in node.continuous:
+                    edge_txt = str(index)
+                else:
+                    if str(index) == "smaller":
+                        edge_txt = u'≤' + str(node.feature_split)
+                    else:
+                        edge_txt = '>' + str(node.feature_split)
+
+                edge = pydot.Edge(node.Id, node.children[index].Id, label = edge_txt)
+                graph.add_edge(edge)
+                que.put(node.children[index])
+                cid += 1
+
+    graph.write_png(path)
