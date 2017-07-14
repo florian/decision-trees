@@ -22,55 +22,32 @@
 \begin{document}
 \maketitle
 
-\begin{abstract}
-TODO: Abstract
-\end{abstract}
-
 \section{Introduction}
 
-(Give an overview of the report)
+Decision trees are a popular method in unsupervised Machine Learning. For this project phase, we decided to explore them in more detail and apply them to some interesting datasets. Primarily, our reasoning behind this was that decision trees themselves are very interpretable. Part of the project was supposed to be analyzing datasets, and we figured that choosing an interpretable method would be very helpful for that.
 
-General
+Before we dive into analyzing datasets, we will first introduce decision trees in general in this section. After having understood how to use decision trees, we will discuss the more important question of how to build them in the next section, by looking at two popular algorithms. Section 3 discusses an important part of building decision trees: What features to base decisions on. Afterwards, we dive into visualizing decision trees and how to use ensemble methods to fight overfitting. Finally, we analyze two datasets using decision trees.
 
-\begin{itemize}
-	\item Repeatedly split the space (divide and conquer)
-    \item Make a decision by following a path down to a leaf
-    \item Nonlinear is possible
-    \item Nonparametric
-\end{itemize}
+A simple decision tree can be found in Figure \ref{fig:simple}. Decision trees consist of two types of nodes: First of all, internal nodes make decisions based on features. Depending on the outcome of the decision, a different child node is visited next. In the bottom of the tree, there are leafs: They make very simple predictions, e.g. by just constantly predicting the same answer or by using a linear classifier. In the visualization, we draw internal nodes using ellipses and leafs using rectangles. For each prediction, we then just follow a path down the tree until we reach a leaf.
 
-Two types of nodes:
-\begin{enumerate}
-	\item Leafs
-    \item Internal nodes
-\end{enumerate}
+\begin{figure}
+	\centering
+	\includegraphics[scale=0.4]{dt.png}
+    \label{fig:simple}
+    \caption{A simple decision tree}
+\end{figure}
 
-Advantages
+Another way to think about this is that decision trees repeatedly split the input space, until the individual partitions allow for simple predictions. In computer science, this is known as a divide and conquer strategy. A great advantage of this is that it easily allows nonlinear decision boundaries, without having to use kernels.
 
-\begin{itemize}
-	\item Interpretability: In contrast to neural networks, it's very clear why a decision was made. This is mostly true for individual predictions, interpreting the entire decision tree is harder
-    \item Little preprocessing needed: Depending on the algorithm, missing values don't need to be handled by the user of the algorithm. Features don't need to be normalized (0-centered and 1-variance)
-    \item Can deal with nonlinearities without kernel tricks
-    \item Predictions are very quick: Just follow a path to a leaf
-    \item Describes given data very well
-    \item Does feature selection for you
-    \item Easy to parallelize
-\end{itemize}
+Furthermore, users of decision trees have to do very little preprocessing of the data. Missing values can be handled by decision trees and feature values don't need to be normalized at all.
 
-Disadvantages
+There are many other advantages. In contrast to other Machine Learning methods like neural networks, it's very clear why a prediction was made. For many applications, e.g.\ in the medical world, this interpretability is very important.
 
-\begin{itemize}
-	\item Very easy to overfit
-    \item Many linear decisions (each node) can't necessarily approximate curves well
-    \item Still have to do feature engineering, e.g. for computer visison
-    \item Too many dimensions are bad (Optimal: Low dimension, many training examples)
-\end{itemize}
+It's clear that decision trees describe their training data very clearly. However, this also leads to the great disadvantage, that decision trees overfit easily. In many cases, they learn to describe the training data exactly and don't generalize well to unseen data. We will spend some time discussing methods that try to reduce this problem.
 
-Regression
+Finally, it's worth noting that we focus on classification in this report. Nevertheless, decision trees can also be used for regression, e.g. by creating a wide tree or by using linear regression models in the leaf.
 
-(Just shortly explain how this could work but mention that we focus on classification here)
-
-\section{Constructing a decision tree}
+\section{Constructing Decision Trees}
 
 \subsection{ID3}
 
@@ -128,72 +105,119 @@ However, sometimes a split with low information gain is necessary to get a good 
 
 \subsection{C4.5}
 
-\begin{itemize}
-	\item From the same creator as ID3 and was designed to fix ID3 shortcomings
-    \item We focus on the three features we consider to be the most important / interesting ones
-    \item There's an entire book on C4.5, so of course there are many more ideas to try but that's beyond the scope of this project
-    \item (Maybe: Mention weighting features is also interesting)
-\end{itemize}
+C4.5 is a more advanced decision tree algorithm that was designed to fix many of ID3's shortcomings. It was created by Ross Quinlan, who also invented ID3. Quinlan wrote an entire book on C4.5, so to reimplement all ideas and variations of C4.5 is beyond the scope of this project. Instead, we will focus on the three ideas that we consider to be the most central ones.
 
 \subsubsection{Continuous features}
 
-\begin{itemize}
-	\item Probably the biggest improvement
-    \item Simple bruteforce solution: Consider each binary split ($\le h, > h$) and calculate the information gain. The maximum information gain is then compared to the ones of the other features. We now need to save one more information about the split ($h$)
-    \item Actually, not all $h$ that occur in the training data need to be considered, many lead to the same information gain
-    \item Idea: Add a function that finds all splits that should be considered
-    \item TODO: Show a table with example values for this
-\end{itemize}
+As we saw in the previous section, ID3 can only deal well with discrete features. However, most datasets contain continuous features. Always throwing these features away or manually converting them into discrete features is of course not an optimal solution. C4.5 fixes this shortcoming, which is probably the greatest improvement of C4.5 to ID3.
+
+Before we start explaining how the splitting works, it's worth taking a moment to think about how the algorithm actually knows whether a feature is discrete or continuous. Because we are only working on some samples, it's impossible to always automatically detect this correctly. One could imagine checking how many different values a feature has, and then just considering it as continuous if it has more than a certain number of different values. However, this process is very error-prone. Zip codes would probably be considered continuous, although they come from a discrete set. In the end, we just decided that the user should tell the algorithm which features should be treated as continuous features.
+
+If a feature is continuous, we of course don't want to split on all possible values. Instead, C4.5 always considers a binary split by comparing the feature value to a split constant $h$. In other words, the data is partitioned using $\le h$ and $> h$.
+
+It's straight-forward to come up with a bruteforce solution for finding a suitable $h$: We just consider all values in the training set that this feature can take, and then calculate the information gain we get by each of these splits. Then, the maximum information gain for this feature is compared to the ones from other features.
+
+While this can lead to a good value of $h$, it's also easy to see that this is a bad solution if the training set is large enough. It turns out that it's also not necessary as many values for $h$ will lead to the same splits for the training data, so they can be considered equivalent. For an example of this, see Figure \ref{continuous-feature}. The bruteforce solution here would be to check the information gain for $h = 0, \dots, 5$. However, $h = 0$ and $h = 1$ lead to the exact same partitoning of the data, similarly $h = 2, \dots, 4$ are equivalent to each other, and only one of these values has to be tried. There are different ways to choose this one value, the most common one is to calculate the mean. So for this dataset, one would try the splits given by $h = 0.5, 3, 5$.
+
+To deal with this, we wrote a helper function that generates all splits that are useful to consider. Neighbouring values that only have the same single class are grouped together for one split. Values that have more than one label (e.g. $5$ in our example) are always considered for a split.
+
+\begin{figure}
+	\centering
+  \begin{tabular}{l|l}
+      \textbf{Feature value} & \textbf{Label} \\
+      \hline
+      0 & A \\
+      1 & A \\
+      2 & B \\
+      3 & B \\
+      4 & B \\
+      5 & A \\
+      5 & B
+  \end{tabular}
+
+  \label{continuous-feature}
+  \caption{Example data for a continuous feature}
+\end{figure}
 
 \subsubsection{Missing values}
 
-\begin{itemize}
-	\item Most algorithms don't know how to deal with missing features, so one usually imputes missing values, e.g. with the median or mean, and then uses normal algorithms
-    \item C4.5 has a built-in way to deal with this problem, so no imputing needs to be done by the user
-    \item Missing values are ignored when computing entropy or information gain
-    \item We remember how common the individual values of a split are
-    \item When predicting and a feature is missing, we randomly choose a child to visit next, using the probability distribution we get by considering how common the individual values were
-    \item When training, the data points with the missing value can be divided the same random way. Alternatives are giving them to certain children that don't get a lot of data, so that there's enough data for all children. Of course this can also introduce wrong biases, so it's a matter of trying and seeing what works best
-    \item Sometimes it's important to always predict the same answer. So the deterministic variant is to always choose the most common option
-\end{itemize}
+Most algorithms in Machine Learning don't know how to deal with missing features by themselves. So usually, the user has to deal with the misssing values before giving the data to the algorithm, e.g. by always imputing the mean value for the respective feature.
+
+C4.5 has a built-in way to deal with this problem, so that the user doesn't have to deal with it at all. First of all, missing values are ignored when computing information gain. When splitting on a feature, it's also remembered how common the individual options for the split are. This gives us a probability distribution, where we can choose a child node randomly, weighted by how commonly that child node is accessed.
+
+When wanting to make a decision based on a missing feature, we just use this probability distribution to choose the next child node to visit. This has an effect similiar to imputing the most common (or the mean) value of that feature, except it's not done on a global level anymore. Instead, the imputing is just based on the training data the respective node was given, and now there is also some randomness involved.
+
+While training, the data points with a missing value can be divided in the same random way. An alternative is to give data with missing values preferedly to child nodes that have very few data points using the normal splitting. By doing this, the individual child nodes all have enough data to make good predictions. Of course, this can also wrongly introduced biases, so one needs to be careful. In the end, one should use cross validation to see which settings works better.
+
+Sometimes, it's important to always predict the same answer. The deterministic variant of this algorithm, is to always choose the most common option when predicting, except of sampling the probability distribution.
 
 \subsubsection{Pruning}
 
-\begin{itemize}
-	\item As explained earlier, we don't want super deep trees that overfit
-    \item Stopping the splitting when the information gain is too low is a bad idea, because there might be a great split coming afterwards (see xor)
-    \item Because of this, we first want to grow the tree very far. Afterwards we can go through the tree and prune all nodes that didn't lead to a good information gain
-    \item (Based on confidence intervals and binomial probability distributions with a user specified threshold)
-\end{itemize}
+As explained earlier, deep decision trees are incredibly prone to overfitting. For this reason, trees are commonly stopped from growing if they get too deep. However, because of the greedy approach we don't really know which nodes to grow further beforehand. As we saw in the xor example, growing the tree as far as possible is often required to see if a split actually yielded a good result because it enabled a good split a few steps later.
 
-\section{Metrics}
+This is the central idea behind pruning: In the first step, we grow the tree as far as possible. Afterwards, we traverse the tree again and turn internal nodes into leafs when they don't improve the predictive accuracy of the model.
 
-(Show plots for the 2d case)
+There are many variants of how this can be done. We decided to implement one based on cross validation. After fitting the model using training data, the user can call a special method for pruning that accepts a validation set. This validation set is then used to test what nodes actually improve the accuracy.
 
-(Measures of impurity)
+An inverse breadth-first search is performed, so we first go through the nodes at the bottom of the tree. We then turn each node individually into a leaf, and compare the accuracy of the model before with the new one, both times using the validation set. If the change improved the accuracy, the node is kept as a leaf, otherwise it's turned back into an internal node. This process is done for the entire tree.
 
-(For pure data: 0, where everything is equally likely: 1)
+Intuitively, this makes a lot of sense. The complexity of the model is reduced unless that complexity actually helps to improve the accuracy of unseen data.
 
-\subsection{Misclassification rate}
+\section{Entropy and Information Gain}
 
-\subsection{Entropy and information gain}
+To find the feature which leads to the best split in the current iteration, both ID3 and C4.5 use entropy and information gain. Entropy takes a list of values and computes how much uncertainty there is in this information. In other words, if the list only contains the same values, then there is no uncertainty on what to predict and the entropy would be $0$. If the list only contains two different values at the same frequency, then the prediction without any further information can't be better than a coin throw, so the entropy is $0.5$. In a formula, entropy is calculated like this:
+\[
+	H(S) = \sum\limits_{i = 1}^J p_i * \log_2\left(\frac{1}{p_i}\right)
+\]
 
-\subsection{Gini}
+\noindent where we loop over all $J$ different values the labels that the dataset $S$ contains, and $p_i$ is the probability of the $i$-th label occuring.
+
+Now, let's assume we split on a feature $a$. In ID3 and C4.5, we split on all possible values for $a$, which we call the set $V(a)$ in the following. For each split the recursive process is then followed. To compute how good this split is, we assume that in the next level of the subtree, only constant predictions will be made. How well, the constant predictions can be made can be computed using entropy.
+
+We need to aggregate the information of how well the split works over all different children the split on $a$ would produce. This is called information gain, and it's a measure for how good a split is, a larger value implying more gain from a split:
+\[
+	\mathit{IG}(S, a) = H(S) - \sum\limits_{v \in V(a)} P_{a, v} * H(S_v)
+\]
+
+\noindent where $S$ is the entire dataset and $P_{a, v}$ is the probability that feature $a$ has value $v$.
+
+The intuition behind this is that a split is good if it reduces the uncertainty. So we compare the current uncertainty with the one a split on this feature would yield. The individual entropy calculations are weighted by how common they are.
+
+\section{Drawing Decision Trees}
 
 \section{Random Forest}
 
-\begin{itemize}
-	\item Bagging to convert many weak learners into a strong learner
-    \item Easy to parallelize
-\end{itemize}
+As already noted in other sections, decision trees are very prone to overfitting. One idea to combat this is to regularize the depth. This makes decision trees weak learners, i.e.\ they have little capacity for learning much information and make simple decisions. A popular ensemble method in Machine Learning is bagging, for combining many weak learners into a strong learner.
+
+One example for this is a majority classifier: It takes a bunch of already trained models, ideally these are all weak learners. For prediction, it then let's each classifier vote on the answer and then predicts the answer with a relative majority. The individual classifiers have a bad accuracy, but by making them vote we can still recognize the most important pattern. Overfitting is harder here, because if many classifiers agree on a prediction, there is probably enough evidence for it in the data.
+
+Random Forest is a way of applying this idea to decision trees: A set of decision trees (i.e.\ a forest) is trained, each on different subsets of the data, and then they are given to a majority classifier. In theory, this doesn't have to be much slower than training normal decision trees, because this process can be parallelized well. We didn't do this here, so it did increase training time quite a bit.
+
+There are two popular ways to choose what data to train the individual trees on: One is to train them on different data points, the other to train them on different features. We implemented both of these methods. These subsets of data or features are chosen randomly, hence the name Random Forest.
+
+Generally, training them on different features seems to be the most popular method in literature, and it also worked better for us. However, this introduces a large amount of randomness. By training the same forest several times, we now got quite different results. Some forests had too many trees that got bad features, so they performed very badly.
+
+Because of this, we had the additional idea to let the user specify a prior weighting to features. By doing this, we can ensure that interesting features are used for more trees. If the user has no prior knowledge, a uniform distribution is used. Of course ideally we would want to infer feature importance automatically, but this is also a lot more complicated. In our case, it also wasn't necessary as we had good ideas what features for our two example datasets might be promising.
+
+One problem with random forest is that there are now a lot more hyperparameters to optimize for: The number of trees to use, how the training data is selected, if we want to weight features, if pruning should be used or the depth should be limited. In order to optimize for all of these, a lot more training time is required. Random forest also makes our models a bit harder to interpret.
 
 \section{Evaluating datasets}
 
 \subsection{Titanic}
 
+\begin{itemize}
+	\item Missing value handling instead of imputing increases the test accuracy a bit and makes train accuracy worse
+    \item TODO: Do feature selection using CV
+\end{itemize}
+
 \subsection{Income census}
 
-(Maybe check with the teacher if we can really use this)
+\begin{itemize}
+	\item describe a little bit about the dataset
+	\item show the result of using income census dataset with ID3 and C4.5
+    \item remove one feature from the feature list, for example using either education or occupation, then show the result and explain the result.
+    \item merge two features into one feature.
+\end{itemize}
 
 \bibliographystyle{alpha}
 \bibliography{sample}
