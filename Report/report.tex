@@ -96,19 +96,19 @@ Another important idea to mention is that in ID3 each feature should only be use
 \subsubsection{Limiting the tree depth}
 \label{subsec:id3-depth}
 
-Overfitting is a huge problem when using decision trees. It can happen very easily that the training data is perfectly described. However, this description might contain so much random noise that predictions do not generalize well for previously unseen data points.
+Overfitting is a huge problem when using decision trees. It can happen very easily that the training data is perfectly described. However, this description might contain so much random noise that predictions do not generalize well to previously unseen data points.
 
-In most Machine Learning algorithms, a very common way to combat overfitting is regularization: By adding additional constraints, the model is forced to be simpler. A simpler model means there is less capacity for remembering information from the training data, and the hope is that this capacity is used to remember the actually important information.
+In most Machine Learning algorithms, a very common way to combat overfitting is regularization: By adding additional constraints, the model is forced to be simpler. A simpler model means there is less capacity for remembering information from the training data, which has the effect that only the most important information is represented in the model.
 
-For decision trees, the primary way to add regularization is to limit the tree depth. Because we split on each feature exactly once, limiting the tree depth in ID3 is equivalent to limiting the maximum number of features that should be used for one prediction. If only a low tree depth is allowed, it means that only the most important features are considered. Instead of splitting, a leaf is then created that predicts the most common label.
+For decision trees, the primary way of adding regularization is to limit the depth of the tree. Because we split on each feature exactly once, limiting the tree depth in ID3 is equivalent to limiting the maximum number of features that should be used for one prediction. If only a small tree depth is allowed, it means that only the most important features are considered. When the maximum depth is reached, leafs are created that predict the most common label of the data they got.
 
-Of course, the optimal tree depth highly depends on the dataset being used. Because of this, tree depth is a hyperparameter that needs be optimized by a method like cross validation.
+Of course, the optimal tree depth highly depends on the dataset being used. Because of this, tree depth is a hyperparameter that needs be optimized using a method like grid search.
 
-Another way to limit the tree depth is to only perform a split if the information gain is high enough. The intuition behind this is that splits with low information gain tend to introduce more model complexity without directly improving the predictive power of the model.
+Another way to limit the tree depth is to only perform a split if it helps to divide the classes much better. The intuition behind this is that such splits tend to introduce more model complexity without directly improving the predictive power of the model.
 
-However, sometimes a split with low information gain is necessary to get a good split afterwards. One extreme example for this is the xor dataset, see Table \ref{fig:xor-table}. We have two features, $a$ and $b$ that take the values of $0$ and $1$. The label is computed using the $\mathit{xor}$ function. Ideally, our decision tree should look like the one in Figure \ref{fig:xor-tree}.
+However, such splits are sometimes necessary to get a good division in the next split afterwards. One extreme example for this is the $\mathit{xor}$ dataset, see Table \ref{fig:xor-table}. We have two features, $a$ and $b$, that take the values of $0$ and $1$. The label is computed using the $\mathit{xor}$ function. Ideally, our decision tree should look like the one in Figure \ref{fig:xor-tree}.
 
-However, in the first layer of the tree, all possible ID3 splits yield an information gain of $0$, as they do not improve the division of classes at all. If we stop here, we could only get an accuracy of 50\%, which is equivalent to randomly guessing. However, if we perform the split without a direct information gain, we can perform a perfect split afterwards, which yields an information gain of 1 and improves the accuracy to 100\%.
+By looking at this decision tree, it becomes apparent that the first split does not directly help to separate the classes. The root node had an equal number of data points from both classes, as do its children. By only looking at these three nodes, one might think that the split should not have been performed. However, by doing this split we can perfectly divide the classes in the next step, reaching an accuracy of 100\%, instead of just 50\%. To conclude, because of the greedy strategy, we cannot directly know whether a split should be performed or not.
 
 \begin{figure}
 \begin{floatrow}
@@ -141,17 +141,17 @@ C4.5 is a more advanced decision tree algorithm that was designed to fix many of
 
 \subsubsection{Continuous features}
 
-As we saw in the previous section, ID3 can only deal well with discrete features. However, most datasets contain continuous features. Always throwing these features away or manually converting them into discrete features is of course not an optimal solution. C4.5 fixes this shortcoming, which is probably the greatest improvement of C4.5 to ID3.
+As we saw in the previous section, ID3 can only deal well with discrete features. However, most datasets contain continuous features. Always throwing these features away, or manually converting them into discrete features, is of course not an optimal solution. This is not necessary in C4.5, as it can directly deal with continuous features.
 
-Before we start explaining how the splitting works, it is worth taking a moment to think about how the algorithm actually knows whether a feature is discrete or continuous. Because we are only working on some samples, it is impossible to always automatically detect this correctly. One could imagine checking how many different values a feature has, and then just considering it as continuous if it has more than a certain number of different values. However, this process is very error-prone. Zip codes would probably be considered continuous, although they come from a discrete set. In the end, we just decided that the user should tell the algorithm which features should be treated as continuous features.
+Before we start explaining how the splitting works, it is worth taking a moment to think about how the algorithm actually knows whether a feature is discrete or continuous. Because we are only working on a finite set of samples, it is impossible to always automatically detect this correctly. One could imagine checking how many different values a feature has, and then just considering it as continuous if it has more than a certain number of different values. However, this process is very error-prone. Zip codes would probably be considered continuous, although they come from a discrete set. In the end, we just decided that the user should tell the algorithm which features should be treated as continuous features.
 
 If a feature is continuous, we of course do not want to split on all possible values. Instead, C4.5 always considers a binary split by comparing the feature value to a split constant $h$. In other words, the data is partitioned using $\le h$ and $> h$.
 
-It is straight-forward to come up with a bruteforce solution for finding a suitable $h$: We just consider all values in the training set that this feature can take, and then calculate the information gain we get by each of these splits. Then, the maximum information gain for this feature is compared to the ones from other features.
+It is straight-forward to come up with a bruteforce solution for finding a suitable $h$: We just consider all values in the training set that this feature can take, and then calculate how good the individual splits would be. Finally, the split constant which separated the classes is chosen, and its performance is compared to other features.
 
-While this can lead to a good value of $h$, it is also easy to see that this is a bad solution if the training set is large enough. It turns out that it is also not necessary as many values for $h$ will lead to the same splits for the training data, so they can be considered equivalent. For an example of this, see Figure \ref{fig:continuous-feature}. The bruteforce solution here would be to check the information gain for $h = 0, \dots, 5$. However, $h = 0$ and $h = 1$ lead to the exact same partitoning of the data, similarly $h = 2, \dots, 4$ are equivalent to each other, and only one of these values has to be tried. There are different ways to choose this one value, the most common one is to calculate the mean. So for this dataset, one would try the splits given by $h = 0.5, 3, 5$.
+While this can lead to a good value of $h$, it is also easy to see that this is a bad solution if the training set is large enough. It turns out that it is also not necessary as many values for $h$ will lead to the same splits for the training data, so they can be considered equivalent. For an example of this, see Figure \ref{fig:continuous-feature}. The bruteforce solution here would be to try $h = 0, \dots, 5$. However, $h = 0$ and $h = 1$ lead to the exact same partitioning of the data, similarly $h = 2, \dots, 4$ are equivalent to each other, and only one of these values has to be tried. There are different ways to choose this one value, the most common one is to calculate the mean. So for this dataset, one would try the splits given by $h = 0.5, 3, 5$.
 
-To deal with this, we wrote a helper function that generates all splits that are useful to consider. Neighbouring values that only have the same single class are grouped together for one split. Values that have more than one label (e.g. $5$ in our example) are always considered for a split.
+To deal with this, we wrote a helper function that generates all splits that are useful to consider. Neighboring values that only have the same single class are grouped together for one split. Values that have more than one label (e.g. $5$ in our example) are always considered for a split.
 
 \begin{figure}
 	\centering
@@ -173,37 +173,43 @@ To deal with this, we wrote a helper function that generates all splits that are
 
 \subsubsection{Missing values}
 
-Most algorithms in Machine Learning do not know how to deal with missing features by themselves. So usually, the user has to deal with the misssing values before giving the data to the algorithm, e.g. by always imputing the mean value for the respective feature.
+Most algorithms in Machine Learning do not know how to deal with missing features by themselves. So usually, the user has to deal with the misssing values before giving the data to the algorithm, e.g.\ by always imputing the mean value of the respective feature.
 
-C4.5 has a built-in way to deal with this problem, so that the user does not have to deal with it at all. First of all, missing values are ignored when computing information gain. When splitting on a feature, it is also remembered how common the individual options for the split are. This gives us a probability distribution, where we can choose a child node randomly, weighted by how commonly that child node is accessed.
+C4.5 has a built-in way to deal with this problem, so that the user does not have to take care of it at all. First of all, missing values are ignored when computing the entropy. When splitting on a feature, it is also remembered how common the individual options for the split are. This gives us a probability distribution, where we can choose a child node randomly, weighted by how commonly that child node is accessed.
 
-When wanting to make a decision based on a missing feature, we just use this probability distribution to choose the next child node to visit. This has an effect similiar to imputing the most common (or the mean) value of that feature, except it is not done on a global level anymore. Instead, the imputing is just based on the training data the respective node was given, and now there is also some randomness involved.
+When wanting to make a decision based on a missing feature, we just use this probability distribution to choose the next child node to visit. This has an effect similar to imputing the most common (or the mean) value of that feature, except it is not done on a global level anymore. Instead, the imputing is just based on the training data the respective node received, and now there is also some randomness involved.
 
-While training, the data points with a missing value can be divided in the same random way. An alternative is to give data with missing values preferedly to child nodes that have very few data points using the normal splitting. By doing this, the individual child nodes all have enough data to make good predictions. Of course, this can also wrongly introduced biases, so one needs to be careful. In the end, one should use cross validation to see which settings works better.
+While training, the data points with a missing value can assigned to child nodes in the same random way. An alternative is to give data with missing values preferably to child nodes that have very few data points using the normal splitting. By doing this, the individual child nodes all have enough data to make good predictions. Of course, this can also wrongly introduced biases, so one needs to be careful. In the end, cross validation should be used to see which option works better.
 
-Sometimes, it is important to always predict the same answer. The deterministic variant of this algorithm, is to always choose the most common option when predicting, except of sampling the probability distribution.
+Sometimes, it is important to always predict the same answer. The deterministic variant of this algorithm is to always choose the most common option when predicting, instead of sampling the probability distribution.
 
 \subsubsection{Pruning}
 
-As explained earlier, deep decision trees are incredibly prone to overfitting. For this reason, trees are commonly stopped from growing if they get too deep. However, because of the greedy approach we do not really know which nodes to grow further beforehand. As we saw in the xor example, growing the tree as far as possible is often required to see if a split actually yielded a good result because it enabled a good split a few steps later.
+As explained earlier, deep decision trees are incredibly prone to overfitting. For this reason, trees are commonly stopped from growing when they get too deep. However, because of the greedy approach, we do not really know which nodes to grow further beforehand. As we saw in the $\mathit{xor}$ example, growing the tree as far as possible is often required to see if a split actually yielded a good result, because it enabled a good split a few steps later.
 
 This is the central idea behind pruning: In the first step, we grow the tree as far as possible. Afterwards, we traverse the tree again and turn internal nodes into leafs when they do not improve the predictive accuracy of the model.
 
-There are many variants of how this can be done. We decided to implement one based on cross validation. After fitting the model using training data, the user can call a special method for pruning that accepts a validation set. This validation set is then used to test what nodes actually improve the accuracy.
+There are many variants of how this can be done. We decided to implement one based on using validation data. After fitting the model using training data, the user can call a special method for pruning that accepts a validation set. This validation set is then used to test what nodes actually improve the accuracy. Ideally, the old training set is split into a new training set and a validation set.
 
-An inverse breadth-first search is performed, so we first go through the nodes at the bottom of the tree. We then turn each node individually into a leaf, and compare the accuracy of the model before with the new one, both times using the validation set. If the change improved the accuracy, the node is kept as a leaf, otherwise it is turned back into an internal node. This process is done for the entire tree.
+In the implementation, an inverse breadth-first search is performed, so we first visit the nodes at the bottom of the tree. Each node is individually turned into a leaf, and the accuracy of the model before is compared with the new accuracy, both times using the validation set. If the change improved the accuracy, the node is kept as a leaf, otherwise it is turned into an internal node again. This process is done for the entire tree.
 
-Intuitively, this makes a lot of sense. The complexity of the model is reduced unless that complexity actually helps to improve the accuracy of unseen data.
+Intuitively, this makes a lot of sense. The complexity of the model is reduced unless that complexity actually helps to improve the accuracy when testing on unseen data.
 
 \section{Entropy and Information Gain}
 \label{sec:entropy}
 
-To find the feature which leads to the best split in the current iteration, both ID3 and C4.5 use entropy and information gain. Entropy takes a list of values and computes how much uncertainty there is in this information. In other words, if the list only contains the same values, then there is no uncertainty on what to predict and the entropy would be $0$. If the list only contains two different values at the same frequency, then the prediction without any further information can not be better than a coin throw, so the entropy is $0.5$. In a formula, entropy is calculated like this:\todo{If we have enough space, a 2d plot of entropy would be nice here}
+To find the feature which leads to the best split in the current iteration, both ID3 and C4.5 use entropy and information gain. Entropy takes a list of values and computes how much uncertainty there is in this information. In other words, if the list only contains the same values, then there is no uncertainty what to predict, and the entropy would be $0$. If the list only contains two different values at the same frequency, then the prediction without any further information can not be better than a fair coin throw, so the entropy is $0.5$. Of course, this works similarly for more than two classes. In a formula, entropy is defined as follows.\todo{If we have enough space, a 2d plot of entropy would be nice here}
 \[
 	H(S) = \sum\limits_{i = 1}^J p_i * \log_2\left(\frac{1}{p_i}\right)
 \]
 
 \noindent where we loop over all $J$ different values the labels that the dataset $S$ contains, and $p_i$ is the probability of the $i$-th label occuring.
+
+\begin{figure}
+	\includegraphics[scale=0.5]{entropy.png}
+    \caption{Entropy and misclassification}
+    \label{fig:entropy}
+\end{figure}
 
 Now, let's assume we split on a feature $a$. In ID3 and C4.5, we split on all possible values for $a$, which we call the set $V(a)$ in the following. For each split the recursive process is then followed. To compute how good this split is, we assume that in the next level of the subtree, only constant predictions will be made. How well, the constant predictions can be made can be computed using entropy.
 
