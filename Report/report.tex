@@ -198,29 +198,29 @@ Intuitively, this makes a lot of sense. The complexity of the model is reduced u
 \section{Entropy and Information Gain}
 \label{sec:entropy}
 
-To find the feature which leads to the best split in the current iteration, both ID3 and C4.5 use entropy and information gain. Entropy takes a list of values and computes how much uncertainty there is in this information. In other words, if the list only contains the same values, then there is no uncertainty what to predict, and the entropy would be $0$. If the list only contains two different values at the same frequency, then the prediction without any further information can not be better than a fair coin throw, so the entropy is $0.5$. Of course, this works similarly for more than two classes. In a formula, entropy is defined as follows.\todo{If we have enough space, a 2d plot of entropy would be nice here}
+To find the feature which leads to the best split in the current iteration, both ID3 and C4.5 use entropy and information gain. Entropy takes a list of values and computes how much uncertainty there is in this information. In other words, if the list only contains the same values, then there is no uncertainty what to predict, and the entropy would be $0$. If the list only contains two different values at the same frequency, then the prediction without any further information can not be better than a fair coin throw, so the entropy is $0.5$. \todo{If we have enough space, the figure could be explained in more detail} Figure \ref{fig:entropy} shows this two class example in form of a plot, comparing it to a scaled misclassification rate. Of course, it works similarly for more than two classes. In a formula, entropy is defined as follows.
 \[
 	H(S) = \sum\limits_{i = 1}^J p_i * \log_2\left(\frac{1}{p_i}\right)
 \]
 
 \noindent where we loop over all $J$ different values the labels that the dataset $S$ contains, and $p_i$ is the probability of the $i$-th label occuring.
 
-\begin{figure}
+\begin{figure}[h]
 	\includegraphics[scale=0.5]{entropy.png}
-    \caption{Entropy and misclassification}
+    \caption{Misclassification scaled by two compared to entropy}
     \label{fig:entropy}
 \end{figure}
 
-Now, let's assume we split on a feature $a$. In ID3 and C4.5, we split on all possible values for $a$, which we call the set $V(a)$ in the following. For each split the recursive process is then followed. To compute how good this split is, we assume that in the next level of the subtree, only constant predictions will be made. How well, the constant predictions can be made can be computed using entropy.
+Now, let's assume a split is performed on feature $a$. In ID3 and C4.5, we split on all possible values for $a$, which we write as the set $V(a)$ in the following. For each split, the recursive process is then followed. To compute how good this split is, we assume that in the next level of the subtree, only constant predictions will be made. How well, the constant predictions of individual children work, is judged using entropy.
 
-We need to aggregate the information of how well the split works over all different children the split on $a$ would produce. This is called information gain, and it is a measure for how good a split is, a larger value implying more gain from a split:
+We need to aggregate this information of all different children the split on $a$ produces. This is called information gain, and it is a measure of how good a split is, a larger value implying more gain from a split:
 \[
 	\mathit{IG}(S, a) = H(S) - \sum\limits_{v \in V(a)} P_{a, v} * H(S_v)
 \]
 
 \noindent where $S$ is the entire dataset and $P_{a, v}$ is the probability that feature $a$ has value $v$.
 
-The intuition behind this is that a split is good if it reduces the uncertainty. So we compare the current uncertainty with the one a split on this feature would yield. The individual entropy calculations are weighted by how common they are.
+The intuition behind this is that a split is good if it reduces the uncertainty. So we compare the current uncertainty with the one a split on this feature would yield. The individual entropy calculations are weighted by how important they are.
 
 \section{Drawing Decision Trees}
 The drawing of decision tree based on the algorithm breadth-first-search. This algorithm starts from the root of the decision tree. It will push the children node of the visiting node into the queue then pop the node stored in queue.
@@ -229,19 +229,19 @@ The drawing of decision tree based on the algorithm breadth-first-search. This a
 
 \section{Random Forest}
 
-As already noted in other sections, decision trees are very prone to overfitting. One idea to combat this is to regularize the depth. This makes decision trees weak learners, i.e.\ they have little capacity for learning much information and make simple decisions. A popular ensemble method in Machine Learning is bagging, for combining many weak learners into a strong learner.
+As already noted in other sections, decision trees are very prone to overfitting. One idea to combat overfitting is to regularize the depth. This makes decision trees weak learners, i.e.\ they have little capacity for learning much information and make simple decisions. A popular ensemble method in Machine Learning is bagging, for combining many weak learners into a strong learner.
 
-One example for this is a majority classifier: It takes a bunch of already trained models, ideally these are all weak learners. For prediction, it then lets each classifier vote on the answer and then predicts the answer with a relative majority. The individual classifiers have a bad accuracy, but by making them vote we can still recognize the most important pattern. Overfitting is harder here, because if many classifiers agree on a prediction, there is probably enough evidence for it in the data.
+One example for this is a majority classifier: It takes a bunch of already trained models, ideally these are all weak learners. For a prediction, it then lets each classifier vote on the answer and then predicts the answer that occured most often (i.e.\ has a relative majority). The individual classifiers typically have a bad accuracy, but by making them vote we can still recognize the most important patterns. It's harder to overfit here, because if many classifiers agree on a prediction, there is probably enough evidence for it in the data.
 
-Random Forest is a way of applying this idea to decision trees: A set of decision trees (i.e.\ a forest) is trained, each on different subsets of the data, and then they are given to a majority classifier. In theory, this does not have to be much slower than training normal decision trees, because this process can be parallelized well. We did not do this here, so it did increase training time quite a bit.
+Random Forest is a way of applying this idea to decision trees: A set of decision trees (i.e.\ a forest) is trained, each on different subsets of the data, and then they are given to a majority classifier. In theory, this does not have to be much slower than training normal decision trees, because this process can be parallelized well. We did not do this here, so training time did increase quite a bit.
 
-There are two popular ways to choose what data to train the individual trees on: One is to train them on different data points, the other to train them on different features. We implemented both of these methods. These subsets of data or features are chosen randomly, hence the name Random Forest.
+There are two popular ways to choose what data to train the individual trees on: One is to train them on different data points, the other is to train them on different features. We implemented both of these methods. The subsets of data or features are chosen randomly, hence the name Random Forest.
 
-Generally, training them on different features seems to be the most popular method in literature, and it also worked better for us. However, this introduces a large amount of randomness. By training the same forest several times, we now got quite different results. Some forests had too many trees that got bad features, so they performed very badly.
+Generally, training them on different features seems to be the most popular method in literature, and it also worked better for us. However, this introduces a large amount of randomness. By training the same forest several times, we now get quite different results. Some forests had too many trees that got bad features, so they performed very badly.
 
-Because of this, we had the additional idea to let the user specify a prior weighting to features. By doing this, we can ensure that interesting features are used for more trees. If the user has no prior knowledge, a uniform distribution is used. Of course ideally we would want to infer feature importance automatically, but this is also a lot more complicated. In our case, it also was not necessary as we had good ideas what features for our two example datasets might be promising.
+Because of this, we had the additional idea to let the user specify prior weights for the features. By doing this, we can ensure that interesting features are used by more trees. If the user has no prior knowledge, a uniform distribution is used. Of course, ideally, we would want to infer feature importance automatically, but this is also a lot more complicated. In our case, it also was not necessary as we had good ideas what features of our two example datasets might be promising.
 
-One problem with random forest is that there are now a lot more hyperparameters to optimize for: The number of trees to use, how the training data is selected, if we want to weight features, if pruning should be used or the depth should be limited. In order to optimize for all of these, a lot more training time is required. Random forest also makes our models a bit harder to interpret.
+One problem with random forest is that there are now a lot more hyperparameters to optimize for: The number of trees to use, how the training data is selected, if we want to weight features, if pruning should be used, or if the depth should be limited. In order to optimize for all of these, a lot more training time is required. Random forest also makes our models a bit harder to interpret.
 
 \section{Evaluating datasets}
 
@@ -285,4 +285,3 @@ One problem with random forest is that there are now a lot more hyperparameters 
 \todo{We still need to collect the sources we used}
 
 \end{document}
-
