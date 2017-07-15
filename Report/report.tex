@@ -56,29 +56,30 @@ Finally, it is worth noting that we focus on classification in this report. Neve
 
 \subsection{ID3}
 
-ID3 (Iterative Dichotomiser 3) is a straight-forward approach for building decision trees. We decided to start with this algorithm because it allows for a gentle introduction to the fundamental ideas behind building decision trees.
+ID3 (Iterative Dichotomiser 3) is a straight-forward approach to building decision trees. We decided to start with this algorithm because it allows for a gentle introduction to the fundamental ideas behind building decision trees.
 The fact that it is quite simple also means that it has some serious drawbacks, and generally should not be used in production. We will explain these shortcomings and address the most important ones in later sections of the report.
 
-Generally, ID3 implements the ideas introduced in the previous section. There are two types of nodes: Internal nodes that make the decision which node to visit next, and leafs  which make a constant prediction.
+Generally, ID3 uses the ideas introduced in the previous section.
+As described there, we distinguish between to types of nodes. Internal nodes make the decision which child node to visit next, and leafs perform constant predictions.
 To build a decision tree using ID3, a recursive strategy is followed: The training data is repeatedly split until a new node gets training data that is suitable for making a constant prediction.
 
-In the following, we will look at both of these type of nodes, starting with internal nodes.
+In the following, both types of nodes are discussed in more detail, starting with internal nodes.
 
 \subsubsection{Internal nodes: Making decisions}
 
 In ID3, the input data is always split based on a single feature. For each possible value of that feature a new child node is created.
 In other words, if a split is made on a feature that allows $k$ different values, then the node will have exactly $k$ child nodes.
-The child nodes then build their own subtrees using the subset of the training data from the parent node that has the respective value in the selected feature.
+The child nodes then build their own subtrees using the subset of training data from the parent node that has the respective value in the selected feature.
 
-Here the first serious drawback of ID3 becomes apparent: Splitting on all possible values only works well for categorical features. For a continuous variable like \emph{age} this approach would work terribly. This is also the major shortcoming of ID3. In Section \ref{subsec:c45}, we will see an algorithm that deals with continuous features in a smarter way.
+Here the first serious drawback of ID3 becomes apparent: Splitting on all possible values only works well for features with a handful of different values. For a continuous variable like \emph{age} this approach would work terribly. In our opinion, this is also the major shortcoming of ID3. In Section \ref{subsec:c45}, we will see an algorithm that deals with continuous features in a smarter way.
 
 \subsubsection{Leafs: Stopping the recursion}
 
-At some point, the recursion has to end, which means a node does not grow a subtree but is turned into a leaf. The leaf then constantly predicts the same answer. Which answer to predict is based on the training data it received.
+At some point, the recursion has to end, which means a node does not grow its own subtree but is turned into a leaf. The leaf then constantly predicts the same answer. Which answer to predict is based on the training data it received.
 
-There are various reasons why a node might be turned into a leaf. The simplest one is that all data points it received have the same label. In this case, there is no reason to split the data further, and the node can be turned into a leaf which predicts this label. A comparable case is that the training data does not allow for any further splits, e.g.\ if all data points are equal to each other but have different labels. In this case, the most common label is predicted.
+There are various reasons why a node might be turned into a leaf. The simplest one is that all data points it received have the same label. In this case, there is no reason to split the data further, and the node can be turned into a leaf which predicts this label. A similar case is that the training data does not allow for any further splits, e.g.\ because all data points are equal to each other but have different labels. In this case, the most common label is predicted.
 
-Another case is that there is just no training data available. We always create a new node for each possible value of a feature. If we are deep in the tree and split on a feature that can have many different values, there might be no training data for some values. If this happens, the most common label of the parent node is predicted.
+Another case is that there is just no training data available. We always create a new node for each possible value of a feature. If we are deep in the tree and split on a feature that can have many different values, there might be no more training data for some values. If this happens, the most common label of the parent node is predicted.
 
 There are other cases where we might want to stop the recursion. We will come back to these in Section \ref{subsec:id3-depth}.
 
@@ -88,16 +89,16 @@ Of course, now the major remaining question is how find the best feature to spli
 
 To find the feature which produces the best division in the next step, different heuristics can be used. The easiest one is misclassification: We just assume that the next node will predict the most common label and calculate how accurate it would be by doing this. Then, the feature with the lowest misclassification rate is chosen.
 
-A more popular heuristic that is also used in ID3 is entropy with information gain. In a nutshell, entropy measures uncertainty, i.e.\ it wants nodes to receive data points that mostly have the same label so that a prediction can be made with a lot of certainty. Because entropy and information gain are not only used in ID3, but also in C4.5, a more thorough description of it is given in Section~\ref{sec:entropy}.
+A more popular heuristic, that is also used in ID3, is entropy with information gain. In a nutshell, entropy measures uncertainty, i.e.\ it wants nodes to receive data points that mostly have the same label so that a prediction can be made with a lot of certainty. Because entropy and information gain are not only used in ID3, but also in C4.5, a more thorough description of them is given in Section~\ref{sec:entropy}.
 
-Another important idea to mention is that in ID3 each feature should only be used once for splitting. Because we split based on all possible values, the data of each child only has one kind of value for each feature that was already split on. Hence, it does not make sense to split on these features again.
+Another important idea to mention is that in ID3 each feature should only be used once for splitting. Because we split based on all possible values, the data of each child only has one distinct value for each feature that was already split on. Hence, it does not make sense to split on these features again.
 
 \subsubsection{Limiting the tree depth}
 \label{subsec:id3-depth}
 
-Overfitting is a huge problem with decision trees. It can happen very easily that the training data is perfectly described. However, this description might contain so much noise that the predictions don not generalize well for previously unseen data points.
+Overfitting is a huge problem when using decision trees. It can happen very easily that the training data is perfectly described. However, this description might contain so much random noise that predictions do not generalize well for previously unseen data points.
 
-In most Machine Learning algorithms a very common way to combat overfitting is regularization: By adding additional constraints, the model is forced to be simpler. A simpler model means there is less capacity for remembering information from the training data, and hopefully the more important information is remembered.
+In most Machine Learning algorithms, a very common way to combat overfitting is regularization: By adding additional constraints, the model is forced to be simpler. A simpler model means there is less capacity for remembering information from the training data, and the hope is that this capacity is used to remember the actually important information.
 
 For decision trees, the primary way to add regularization is to limit the tree depth. Because we split on each feature exactly once, limiting the tree depth in ID3 is equivalent to limiting the maximum number of features that should be used for one prediction. If only a low tree depth is allowed, it means that only the most important features are considered. Instead of splitting, a leaf is then created that predicts the most common label.
 
@@ -216,6 +217,7 @@ We need to aggregate the information of how well the split works over all differ
 The intuition behind this is that a split is good if it reduces the uncertainty. So we compare the current uncertainty with the one a split on this feature would yield. The individual entropy calculations are weighted by how common they are.
 
 \section{Drawing Decision Trees}
+The drawing of decision tree based on the algorithm breadth-first-search. This algorithm starts from the root of the decision tree. It will push the children node of the visiting node into the queue then pop the node stored in queue.
 
 \todo{Add about a third of a page here, max one half}
 
@@ -246,7 +248,7 @@ One problem with random forest is that there are now a lot more hyperparameters 
     \item C4.5: Report how pruning and max depth help, maybe in form of a table with different accuracies
     \item Report how well random forest does, compare with sklearn
     \item Test how accuracy changes when different features get removed and then report what feature are most important
-\end{itemize}
+\end{itemize}t
 
 \subsection{Income census}
 
@@ -277,3 +279,4 @@ One problem with random forest is that there are now a lot more hyperparameters 
 \todo{We still need to collect the sources we used}
 
 \end{document}
+
