@@ -30,14 +30,14 @@
 
 Decision trees are a popular method in supervised Machine Learning. For this project phase, we decided to explore them in more detail and to apply them to some interesting datasets. Primarily, our motivation behind this was that decision trees are very interpretable. Part of the project is analyzing datasets, and we concluded that choosing an interpretable method would be quite helpful for doing that.
 
-Before diving into the dataset analysis, this section introduces the foundational ideas behind decision trees. After having understood how to use decision trees, the more important question of how to build them is discussed in the next section, by looking at two popular algorithms. Section 3 deals with a popular heuristic for choosing the features that are used to make decisions.
-The sections afterwards explain the technical details behind our decision tree visualization, and how ensemble methods can be used to combat overfitting. Finally, two datasets are analyzed using decision trees.
+Before diving into the dataset analysis, this section introduces the foundational ideas behind decision trees. Section 2 quickly deals with our decision tree visualizations. After having understood how to use decision trees, the more important question of how to build them is discussed in the next section, by looking at two popular algorithms. Section 4 deals with a popular heuristic for choosing the features that are used to make decisions.
+The section afterwards explains how ensemble methods can be used to combat overfitting. Finally, two datasets are analyzed using decision trees.
 
-\todo{Create our own example image} A simple decision tree can be found in Figure \ref{fig:simple}. Decision trees consist of two types of nodes: First of all, internal nodes (i.e.\ nodes that are not leafs) make decisions based on features. Depending on the outcome of the decision, a different child node is visited next. At the bottom of the tree, there are leafs: They make very simple predictions, e.g.\ by just constantly predicting the same answer or by using a linear classifier. In the visualization, internal nodes are displayed using ellipses and leafs using rectangles. To make a prediction, a path down the decision tree is traversed until a leaf is reached. The leaf node is then asked to make the final prediction.
+A simple decision tree using weather features can be found in Figure \ref{fig:simple}. Decision trees consist of two types of nodes: First of all, internal nodes (i.e.\ nodes that are not leafs) make decisions based on features. Depending on the outcome of the decision, a different child node is visited next. At the bottom of the tree, there are leafs: They make very simple predictions, e.g.\ by just constantly predicting the same answer or by using a linear classifier. In the visualization, internal nodes are displayed using ellipses and leafs using rectangles. To make a prediction, a path down the decision tree is traversed until a leaf is reached. The leaf node is then asked to make the final prediction.\todo{Maybe add some more explanation of how to read the weather example}
 
 \begin{figure}
 	\centering
-	\includegraphics[scale=0.4]{dt.png}
+	\includegraphics[scale=0.4]{introduction.jpg}
     \caption{A simple decision tree}
     \label{fig:simple}
 \end{figure}
@@ -51,6 +51,20 @@ As mentioned earlier, decision trees allow for easy interpretation. In contrast 
 By now it should be obvious that decision trees describe their training data very clearly. However, this also leads to the great disadvantage that decision trees overfit easily. In many cases, they learn to describe the training data exactly, and their predictions do not generalize well to unseen data. Several sections of this report deal with methods that aim to reduce this problem.
 
 Finally, it is worth noting that we focus on classification in this report. Nevertheless, decision trees can also be used for regression, e.g.\ by using linear regression models in the leaf.
+
+\section{Drawing Decision Trees}
+
+Before diving into building decision trees, we quickly want to mention that we also wrote code for visualizing decision trees. This allows us to see whether our algorithm actually produces something reasonable. Furthermore, we can use the visualizations to analyze our datasets.
+
+Technically, drawing the tree is based on the \emph{pydot} graphics library. To traverse all nodes of the tree, a breadth-first search is performed, and information about all nodes is collected.
+
+\begin{figure}[h]
+	\includegraphics[scale=0.3]{titanic-depth2-id3.png}
+    \caption{Titanic decision tree (ID3)}
+    \label{fig:drawing-titanic}
+\end{figure}
+
+An example of how the result might look like is given in Figure~\ref{fig:drawing-titanic}. Internal nodes are drawn using ellipses, leafs using rectangles. The first line of an internal node tells us what feature the split is based on, the edge descriptions correspond to the possible feature values. Lines 2 and 3 in internal nodes, and lines 1 and 2 in leafs, show the label distributions.
 
 \section{Constructing Decision Trees}
 
@@ -115,7 +129,7 @@ By looking at this decision tree, it becomes apparent that the first split does 
 \ffigbox{%
   \includegraphics[scale=0.4]{xor.png}%
 }{%
-\caption{xor decision tree}%
+\caption{$\mathit{xor}$ decision tree}%
 	\label{fig:xor-tree}
 }
 \capbtabbox{%
@@ -128,7 +142,7 @@ By looking at this decision tree, it becomes apparent that the first split does 
       1 & 1 & false
   \end{tabular}
 }{%
-\caption{xor truth table}%
+\caption{$\mathit{xor}$ truth table}%
 	\label{fig:xor-table}
 }
 \end{floatrow}
@@ -137,7 +151,7 @@ By looking at this decision tree, it becomes apparent that the first split does 
 \subsection{C4.5}
 \label{subsec:c45}
 
-C4.5 is a more advanced decision tree algorithm that was designed to fix many of ID3's shortcomings. It was created by Ross Quinlan, who also invented ID3. Quinlan wrote an entire book on C4.5, so to reimplement all ideas and variations of C4.5 is beyond the scope of this project. Instead, we will focus on the three ideas that we consider to be the most central ones.
+C4.5 is a more advanced decision tree algorithm that was designed to fix many of ID3's shortcomings. It was created by Ross Quinlan, who also invented ID3. Quinlan wrote an entire book~\cite{quinlan2014c4} on C4.5, so to reimplement all ideas and variations of C4.5 is beyond the scope of this project. Instead, we will focus on the three ideas that we consider to be the most central ones.
 
 \subsubsection{Continuous features}
 
@@ -184,6 +198,7 @@ While training, the data points with a missing value can assigned to child nodes
 Sometimes, it is important to always predict the same answer. The deterministic variant of this algorithm is to always choose the most common option when predicting, instead of sampling the probability distribution.
 
 \subsubsection{Pruning}
+\label{subsec:c45-pruning}
 
 As explained earlier, deep decision trees are incredibly prone to overfitting. For this reason, trees are commonly stopped from growing when they get too deep. However, because of the greedy approach, we do not really know which nodes to grow further beforehand. As we saw in the $\mathit{xor}$ example, growing the tree as far as possible is often required to see if a split actually yielded a good result, because it enabled a good split a few steps later.
 
@@ -222,11 +237,6 @@ We need to aggregate this information of all different children the split on $a$
 
 The intuition behind this is that a split is good if it reduces the uncertainty. So we compare the current uncertainty with the one a split on this feature would yield. The individual entropy calculations are weighted by how important they are.
 
-\section{Drawing Decision Trees}
-The drawing of decision tree based on the algorithm breadth-first-search. This algorithm starts from the root of the decision tree. It will push the children node of the visiting node into the queue then pop the node stored in queue.
-
-\todo{Add about a third of a page here, max one half}
-
 \section{Random Forest}
 
 As already noted in other sections, decision trees are very prone to overfitting. One idea to combat overfitting is to regularize the depth. This makes decision trees weak learners, i.e.\ they have little capacity for learning much information and make simple decisions. A popular ensemble method in Machine Learning is bagging, for combining many weak learners into a strong learner.
@@ -247,41 +257,121 @@ One problem with random forest is that there are now a lot more hyperparameters 
 
 \subsection{Titanic}
 
-\begin{itemize}
-	\item Give a short introduction to the dataset
-    \item Use ID3 and C4.5, show visualization with max depth 2, and report accuracy, compare with sklearn
-    \item C4.5: Compare imputing with just using missing values (improves test accuracy, makes training accuracy worse)
-    \item C4.5: Report how pruning and max depth help, maybe in form of a table with different accuracies
-    \item Report how well random forest does, compare with sklearn
-    \item Test how accuracy changes when different features get removed and then report what feature are most important
-\end{itemize}t
+The Titanic dataset~\cite{titanic} is a popular dataset for introducing people to basic data science tasks. It contains information about passengers from the Titanic, e.g.\  their age, sex, or how much they paid for their tickets. The goal is to predict whether a passenger survived or not. We split the official training set into a training and test set, because we can check our accuracy a lot quicker if we don't have to submit to kaggle all the time. However, this decreases the size of our training set by 20\%.
+
+Of course, there was a lot of randomness involved in who survived, so given general data about the passengers, it is not possible to always perfectly predict whether they survived. Still, we will try to get a good accuracy, and will try to see what features are the most useful.
+
+To train a model using ID3, we only use discrete features, which means we don't take into account the age of a passenger and how much they paid for their ticket. By doing this, we get a test accuracy of $0.793$. Interestingly, sklearn~\cite{scikit-learn} gets the exact same accuracy, even without rounding. Training accuracy is not much higher ($0.843$).
+
+Next, we trained a model with C4.5, using all features. This actually made the test accuracy worse ($0.765$) and training accuracy a lot better ($0.987$), which means that we are now overfitting.
+
+The ID3 result can be visualized by choosing a maximum depth of 2, see Figure \ref{fig:drawing-titanic}. The C4.5 result with a maximum depth of 2 looks very similar, see Figure \ref{fig:titanic}. The only difference is that for male passengers the next split is based on age, instead of the class that the person traveled in. Of course, these depth two models are not the ones that work best, but the deepest one that still have an acceptable size to show them in this report.
+
+\begin{figure}[h]
+	\includegraphics[scale=0.3]{titanic-depth2-c45.png}
+    \caption{Titanic decision tree (C4.5)}
+    \label{fig:titanic}
+\end{figure}
+
+As we can see, some leafs allow for a good classification, e.g.\ for female passengers that traveled in the first two classes. Male passengers have a higher probability of surviving in the first class (ID3) or when they are still very young (C4.5). But other than that, there's too much randomness involved to make good predictions using these two trees.
+
+For missing feature values we tried imputing the mean, as well as using C4.5's built-in solution. The latter sometimes produced models with a minimally better accuracy, but generally the results were in the same ballpark.
+
+To combat overfitting, we implemented the pruning algorithm described in Section~\ref{subsec:c45-pruning}. This improved test accuracy to $0.821$. Pruning removed $147$ of $201$ nodes, so a large part of the tree was actually cut. sklearn managed to get an out of the box accuracy of $0.810$, so this time we managed to comfortably beat sklearn.
+Limiting the depth did generally not help a lot, and was vastly outperformed by pruning.
+
+Finally, we tried applying Random Forest to this dataset. The Random Forest variant that uses different data points for each tree performed the worst. After seeing this, we quickly settled to the variant that uses a subset of all features. This generally performed better, but also introduced a large amount of randomness. When training a model with the same parameters several times, the accuracy might be completely different. In the end, we only managed to get the same accuracy as our best C4.5 model (0.8211), by using all features.  We spent some time manually weighting features, but this also did not improve accuracy further.
+
+sklearn got an accuracy of $0.816$ using Random Forest. Our end result is better, but this time, we did a lot of hyperparameter tuning for our own algorithm, and none for sklearn, so it is not a fair comparison to make. Furthermore, sklearn's Random Forest implementation is a lot less vulnerable to randomness, so it is probably a better idea to use this implementation. Since our Random Forest also did not improve on C4.5 itself, we think that our implementation might be too simplistic.
+
+By looking at the visualizations of decision trees (which we include in the electronic submission), we can manually infer feature importance. Generally, the first feature to split on was always \emph{sex}, which we consider to be the most important feature. The features \emph{Pclass} and \emph{Fare} were both also quite important. However, they are strongly correlated, so having both features available only gives a small advantage. Having \emph{age} available improves accuracy, too. \emph{SibSp} and \emph{Parch} (the number of relatives on board of the ship) were only used very deep inside the tree, and can be considered the least important features.
 
 \subsection{Income census}
 
-\begin{itemize}
-	\item describe a little bit about the dataset
+The dataset is from the UCI machine learning repository~\cite{census}. Extraction was done by Barry Becker from the 1994 Census database. The attributes include personal information, like age, work class, education, and others. The task is to predict whether a person can make over \$50.000 a year.
 
-    The dataset is from UCI machine learning repository. Extraction was done by Barry Becker from 1994 Census database. The attribute information includes age, workclass, education and so on. The prediction task is to predict whether a person can make over 50K a year.
+First we used the sklearn library to build a decision tree. To avoid overfitting and also to compare with the decision tree built by ID3, we removed all the continuous features. The accuracy is 0.814.
 
+Then we used ID3 and C4.5 to construct decision trees with different maximum depths. The accuracy of each tree is shown below in Figure \ref{fig:id3c45all}.
+\begin{figure}[h]
+\centering
+    \begin{tabular}{c|c|c}
+       Algorithm & Maximum depth & Accuracy \\
+        \hline
+        ID3 &2& 0.822\\
+        & 3 & 0.823\\
+        & 4& 0.818\\
+        & 5& 0.817\\
+        \hline
+        C4.5 &2& 0.829\\
+        &3 & 0.837\\
+        &4 & 0.835\\
+        &5 & 0.831\\
+     \end{tabular}
+     \caption{Different methods with different depths}
+     \label{fig:id3c45all}
+\end{figure}
 
-	\item show the result of using income census dataset with ID3 and C4.5
+Even in the worst case, which is the decision tree constructed by ID3 with maximum depth 5, the accuracy of it is 0.817. It is still higher than the model trained by sklearn, which means that here our module works better than sklearn's module.
 
-	First we used ID3 and C4.5 to construct decision trees with different maximum depth. The accuracy of each tree are shown below.
+It is clear that with the growing depth of the decision tree constructed by ID3, the accuracy drops from 0.822 to 0.817. On the contrary, the accuracy of decision trees built by C4.5 grows when their depths grow.
 
-	It is clear that with the growing depth of decision tree constructed by ID3, the accuracy drops from 0.8227 to 0.8184. On the contrary, the accuracy of decision trees built by C4.5 grows when their depths grow.
+The reason why this situation happened can be that by using only eight discrete features, the ID3 model can be easily overfitting when the depth value gets bigger. For C4.5 model, it has 12 features. With small depth value, it can be underfitting. So the accuracy of the C4.5 model grows, when its depth grows.
 
-    The reason why this situation happened could be
+The second experiment we did was to use a subset of features for training our decision tree. We assume that the feature \emph{relationship} is redundant to another feature \emph{marital-status}, so we removed only one of them, and tested the model after we trained it. The decision trees in this experiment are all with same maximum depth of 3. The accuracy of both trees are shown in Figure \ref{fig:id3c45second}.
 
-	\item remove one feature from the feature list, for example using either education or occupation, then show the result and explain the result.
+\begin{figure}[h]
+    \centering
+    	\begin{tabular}{c|c|c}
+        The method we used & The feature excluded & Accuracy \\
+        \hline
+        ID3 &marital-status& 0.823\\
+        & relationship & 0.824\\
+        \hline
+        C4.5 &marital-status& 0.838\\
+        &relationship &0.836\\
+        \end{tabular}
+    \caption{Different methods without different features}
+    \label{fig:id3c45second}
+ \end{figure}
 
-    Another experiment we did is to use a subset of features for training our decision tree. We consider that the feature "relationship" is redundant to another feature "marital-status", so we removed one of them, and tested the model after we trained it. The decision trees in this experiment are all with maximum depth of 3. The accuracy of both trees are shown below.
+Compared to the corresponding accuracies in Figure \ref{fig:id3c45all}, the accuracies in Figure \ref{fig:id3c45second} do not change much. So our assumption is basically correct. The feature \emph{relationship} and \emph{marital-status} are redundant.
 
-    The last experiment is directly removing the feature "native country", because this feature in dataset includes 41  kinds of values. With such many detailed values the model can cause overfitting. After we removed it, the accuracy of the decision tree built by ID3 dropt to 0.7637, but the accuracy of the decision tree built by C4.5 grows to 0.8345. The reason why the accuracy dorps in ID3 tree can probably be that the number of discrete features is only 8, including feature "native-country". When we removed feature "native-country", there are only 7 left. Such few features cause underfitting. This situation will not happen in C4.5 model, because in C4.5 model there are 12 discrete or continuous features. Even if we remove the feature "native-country", there are still 11 features left, which underfitting will not happen. Meanwhile, overfitting is also avoided by that removal of that feature. That is why the accuracy grows to be the highest in C4.5 model.
+The third experiment is directly removing the feature \emph{native country}, because this feature includes 41 kinds of values in the dataset. With so many detailed values, the model can be overfitting. After we removed it, the accuracy of the decision tree built by ID3 dropped to 0.763, but the accuracy of the decision tree built by C4.5 grows to 0.836. The reason why the accuracy drops in the ID3 tree can probably be that the number of discrete features is only eight, including feature \emph{native-country}. When we removed feature \emph{native-country}, there are only seven left. Such few features cause underfitting. This situation does not happen in the C4.5 model, because in the C4.5 model there are 12 discrete or continuous features. Even if we remove the feature \emph{native-country}, there are still 11 features left, which means underfitting will not happen. Meanwhile, overfitting is also avoided by that removal of that feature. That is why the accuracy grows to be the highest in the C4.5 model. The result is shown in Figure \ref{fig:withoutnc}
 
-\end{itemize}
+\begin{figure}[h]
+	\centering
+    \begin{tabular}{c|c}
+    The method we used & Accuracy \\
+        \hline
+        ID3 & 0.763\\
+        \hline
+        C4.5 & 0.836\\
+    \end{tabular}
+    \caption{Accuracy without feature "native country"}
+    \label{fig:withoutnc}
+\end{figure}
+
+The last two experiments are for testing whether Random Forest and pruning improve the accuracy. The final accuracy of using random forest is 0.829. The final accuracy of implementing pruning is \dots \todo{Report accuracy} . Both models do not improve much in accuracy, but increase the execution time a lot. To conclude, these two methods are not so practical for our dataset.
+
+\section{Conclusion}
+
+During this project phase, we found that decision trees are great when one wants to understand how models actually decide on predictions internally. This turned out to be useful for the analysis part of the project.
+
+ID3 is based on a simple idea, but for our datasets it already performed pretty well. For a short introduction, it also illustrates the foundational ideas nicely.
+
+C4.5 uses much more sophisticated methods. For our datasets, this helped to squeeze out a few percentage points of additional accuracy. Especially dealing with continuous features and pruning are great additions to decision trees.
+
+To reduce overfitting further, we explored Random Forest. At least for our analyzed datasets, this did not improve accuracy any further. Still, it was interesting to learn about this algorithm. Given more time, it should be possible to implement much more sophisticated variations of it.
+
+Our visualization implementation turned out to be very useful for debugging our algorithm implementations, as well as figuring out how they deal with the different datasets.
+
+Finally, it is worth noting that there are many aspects of decision trees we did not even touch on. \todo{Maybe add references to these topics} Interested readers might want to explore more about incremental decision tree learning, other uncertainty measures like gini impurity, or other algorithms for building decision trees, like CART.
+
 
 \bibliographystyle{alpha}
-\bibliography{sample}
+\bibliography{sources}
+
 \todo{We still need to collect the sources we used}
 
 \end{document}
