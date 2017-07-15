@@ -33,7 +33,9 @@ Decision trees are a popular method in supervised Machine Learning. For this pro
 Before diving into the dataset analysis, this section introduces the foundational ideas behind decision trees. Section 2 quickly deals with our decision tree visualizations. After having understood how to use decision trees, the more important question of how to build them is discussed in the next section, by looking at two popular algorithms. Section 4 deals with a popular heuristic for choosing the features that are used to make decisions.
 The section afterwards explains how ensemble methods can be used to combat overfitting. Finally, two datasets are analyzed using decision trees.
 
-A toy decision tree using weather features can be found in Figure \ref{fig:simple}. Decision trees consist of two types of nodes: First of all, internal nodes (i.e.\ nodes that are not leafs) make decisions based on features. Depending on the outcome of the decision, a different child node is visited next. At the bottom of the tree, there are leafs: They make very simple predictions, e.g.\ by just constantly predicting the same answer or by using a linear classifier. In the visualization, internal nodes are displayed using ellipses and leafs using rectangles. To make a prediction, a path down the decision tree is traversed until a leaf is reached. The leaf node is then asked to make the final prediction.\todo{Maybe add some more explanation of how to read the weather example}
+A toy decision tree using weather features can be found in Figure \ref{fig:simple}. Decision trees consist of two types of nodes: First of all, internal nodes (i.e.\ nodes that are not leafs) make decisions based on features. Depending on the outcome of the decision, a different child node is visited next. At the bottom of the tree, there are leafs: They make very simple predictions, e.g.\ by just constantly predicting the same answer or by using a linear classifier. In the visualization, internal nodes are displayed using ellipses and leafs using rectangles. To make a prediction, a path down the decision tree is traversed until a leaf is reached. The leaf node is then asked to make the final prediction.
+
+In the example in Figure~\ref{fig:simple}, different weather conditions are evaluated in the internal nodes, until, finally, a decision is made on whether to go outside or stay inside.
 
 \begin{figure}
 	\centering
@@ -213,12 +215,12 @@ Intuitively, this makes a lot of sense. The complexity of the model is reduced u
 \section{Entropy and Information Gain}
 \label{sec:entropy}
 
-To find the feature which leads to the best split in the current iteration, both ID3 and C4.5 use entropy and information gain. Entropy takes a list of values and computes how much uncertainty there is in this information. In other words, if the list only contains the same values, then there is no uncertainty what to predict, and the entropy would be $0$. If the list only contains two different values at the same frequency, then the prediction without any further information can not be better than a fair coin throw, so the entropy is $0.5$. \todo{If we have enough space, the figure could be explained in more detail} Figure \ref{fig:entropy} shows this two class example in form of a plot, comparing it to a scaled misclassification rate. Of course, it works similarly for more than two classes. In a formula, entropy is defined as follows.
+To find the feature which leads to the best split in the current iteration, both ID3 and C4.5 use entropy and information gain. Entropy takes a list of values (labels, in our case) and computes how much uncertainty there is in this information. In other words, if the list only contains the same values, then there is no uncertainty of what to predict, and the entropy is $0$. If the list only contains two different values at the same frequency, then the prediction without any further information can not be better than a fair coin throw, so the entropy is $0.5$. Figure \ref{fig:entropy} shows this two class example in form of a plot, comparing it to a scaled misclassification rate\footnote{The error we get by always predicting the more common class. It is scaled by a factor of $2$ so that both measures are in the $[0, 1]$ range.}. Of course, it works similarly for more than two classes. In a formula, entropy is defined as follows.
 \[
 	H(S) = \sum\limits_{i = 1}^J p_i * \log_2\left(\frac{1}{p_i}\right)
 \]
 
-\noindent where we loop over all $J$ different values the labels that the dataset $S$ contains, and $p_i$ is the probability of the $i$-th label occuring.
+\noindent where we loop over all $J$ different values of the labels in the dataset $S$, and where $p_i$ is the probability of the $i$-th label occurring.  It is not immediately obvious why this formula does what we want it to do, but Figure~\ref{fig:entropy} shows that, at least for the two class case, it is quite similar to the misclassification rate.
 
 \begin{figure}[h]
 	\includegraphics[scale=0.5]{entropy.png}
@@ -226,16 +228,20 @@ To find the feature which leads to the best split in the current iteration, both
     \label{fig:entropy}
 \end{figure}
 
-Now, let's assume a split is performed on feature $a$. In ID3 and C4.5, we split on all possible values for $a$, which we write as the set $V(a)$ in the following. For each split, the recursive process is then followed. To compute how good this split is, we assume that in the next level of the subtree, only constant predictions will be made. How well, the constant predictions of individual children work, is judged using entropy.
+Now, let's assume a split is performed on feature $a$.
+We use $V(a)$ to denote the set of values this feature splits on. For discrete features, $V(a)$ is the set of all possible values that $a$ can take. For continuous features, it only contains two values, representing the two partition elements~$\le h$ and~$> h$.
 
-We need to aggregate this information of all different children the split on $a$ produces. This is called information gain, and it is a measure of how good a split is, a larger value implying more gain from a split:
+We now want to compute how good a split on a certain feature is.
+To do this, we assume that in the next level of the subtree, only constant predictions will be made. How well the constant predictions of individual children work, is judged using entropy.
+
+So for each child node, we know now how well the split worked, but this information needs to be aggregated for all child nodes. It also needs to be put into one measure, so that we can compare it with different features (and split constants). This is exactly what information gain is for. It measures how good a split is, a larger value implying more gain from a split:
 \[
 	\mathit{IG}(S, a) = H(S) - \sum\limits_{v \in V(a)} P_{a, v} * H(S_v)
 \]
 
-\noindent where $S$ is the entire dataset and $P_{a, v}$ is the probability that feature $a$ has value $v$.
+\noindent where $S$ is the entire dataset and $P_{a, v}$ is the probability that feature $a$ has value $v$ (or for the continuous case, that a data point is in partition $v$).
 
-The intuition behind this is that a split is good if it reduces the uncertainty. So we compare the current uncertainty with the one a split on this feature would yield. The individual entropy calculations are weighted by how important they are.
+The intuition behind this is that a split is good if it reduces the uncertainty. So we compare the current uncertainty with the one a split on this feature would yield. The individual entropy calculations are weighted by how important they are. Finally, this gives us a heuristic for evaluating how good different splits are.
 
 \section{Random Forest}
 
